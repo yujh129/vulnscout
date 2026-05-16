@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
@@ -55,7 +55,7 @@ class Scan(Base):
     vuln_count_high = Column(Integer, default=0)
     vuln_count_medium = Column(Integer, default=0)
     vuln_count_low = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     vulnerabilities = relationship("Vulnerability", back_populates="scan", cascade="all, delete-orphan")
 
@@ -74,7 +74,7 @@ class Vulnerability(Base):
     title = Column(Text)
     description = Column(Text)
     vulnerable_code = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     scan = relationship("Scan", back_populates="vulnerabilities")
     patches = relationship("Patch", back_populates="vulnerability", cascade="all, delete-orphan")
@@ -116,8 +116,7 @@ class ScanResponse(BaseModel):
     progress_percent: float = 0.0
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class VulnerabilityResponse(BaseModel):
@@ -132,8 +131,7 @@ class VulnerabilityResponse(BaseModel):
     description: str | None
     vulnerable_code: str | None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PatchResponse(BaseModel):
@@ -143,8 +141,7 @@ class PatchResponse(BaseModel):
     description: str | None
     status: PatchStatus
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ScanProgress(BaseModel):

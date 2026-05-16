@@ -3,6 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from pathlib import Path
 
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
 
@@ -35,9 +36,7 @@ class Settings(BaseSettings):
     def model_path(self) -> Path:
         return Path(self.model_cache_dir) / self.model_name
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
 settings = Settings()
