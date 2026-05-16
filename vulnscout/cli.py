@@ -1,0 +1,383 @@
+#!/usr/bin/env python3
+"""VulnScout CLI — AI-powered code vulnerability scanner."""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+import click
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.table import Table
+from rich.progress import Progress, SpinnerColumn, TextColumn
+
+from vulnscout import __version__
+from vulnscout.core.config import settings
+from vulnscout.core.detector import detect_hardware
+from vulnscout.core.model_manager import ModelManager
+
+console = Console()
+
+
+@click.group()
+@click.version_option(version=__version__, prog_name="vulnscout")
+def cli():
+    """VulnScout: AI-Powered Vulnerability Code Audit Assistant.
+
+    Scan local code, GitHub repositories, or ZIP files for security vulnerabilities
+    using locally deployed DeepSeek-Coder. Get detailed reports and auto-generated fixes.
+    """
+    pass
+
+
+# ── Scan Command ───────────────────────────────────────────────────────
+
+@cli.command()
+@click.argument("path", required=True)
+@click.option("--format", "-f", "output_format", type=click.Choice(["json", "sarif", "markdown"]), default="json", help="Report output format. (default: json)")
+@click.option("--output", "-o", type=click.Path(), help="Write report to file instead of stdout.")
+@click.option("--auto-fix", is_flag=True, help="Automatically generate fix patches for all vulnerabilities.")
+@click.option("--lang", multiple=True, type=click.Choice(["python", "javascript", "typescript", "java", "c", "cpp"]), help="Target languages to scan. Default: all supported.")
+@click.option("--severity", type=click.Choice(["critical", "high", "medium", "low"]), help="Minimum severity to report.")
+def scan(path, output_format, output, auto_fix, lang, severity):
+    """Scan code for vulnerabilities.
+
+    PATH can be a local directory, a GitHub repository URL, or a ZIP file path.
+    """
+    from vulnscout.models.db import init_db, SessionLocal
+    from vulnscout.models.schemas import Scan, ScanStatus, SourceType, Vulnerability
+    from vulnscout.scanner.code_fetcher import CodeFetcher
+    from vulnscout.scanner.pipeline import ScanPipeline
+    from vulnscout.utils.report_formatter import format_report
+
+    init_db()
+    db = SessionLocal()
+
+    # Detect source type
+    path_lower = path.lower()
+    if path_lower.startswith("http://") or path_lower.startswith("https://"):
+        source_type = SourceType.URL
+        source_path = path
+    elif path.endswith(".zip"):
+        source_type = SourceType.LOCAL
+        source_path = path
+    else:
+        source_type = SourceType.LOCAL
+        source_path = path
+
+    click.echo(f"VulnScout v{__version__}")
+    click.echo(f"   Scanning: {path}")
+
+    # Create scan record
+    scan = Scan(source_type=source_type, source_path=source_path)
+    db.add(scan)
+    db.commit()
+    db.refresh(scan)
+
+    # Fetch code
+    fetcher = CodeFetcher()
+    try:
+        if source_type == SourceType.URL:
+            click.echo("   Cloning repository...")
+            source_dir = str(fetcher.fetch_github(source_path))
+        elif path.endswith(".zip"):
+            click.echo("   Extracting ZIP file...")
+            zip_data = Path(path).read_bytes()
+            source_dir = str(fetcher.fetch_zip(zip_data))
+        else:
+            if not Path(path).exists():
+                click.echo(f"Error: Path not found: {path}", err=True)
+                sys.exit(1)
+            source_dir = path
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        scan.status = ScanStatus.FAILED
+        db.commit()
+        sys.exit(1)
+
+    # Run pipeline with progress
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Scanning code...", total=None)
+
+        class CliProgress:
+            def on_progress(self, percent, current_file=None):
+                progress.update(task, description=f"Scanning: {current_file or '...'} ({percent:.0f}%)")
+            def on_vuln_found(self, file, severity, title):
+                pass
+            def on_file_done(self, file, vuln_count):
+                pass
+            def on_scan_done(self, total_vulns, duration):
+                progress.update(task, description=f"Done! Found {total_vulns} vulnerabilities in {duration:.1f}s")
+
+        pipeline = ScanPipeline(db, CliProgress())
+
+        try:
+            pipeline.run(scan, source_dir)
+        except Exception as e:
+            click.echo(f"\nError during scan: {e}", err=True)
+            scan.status = ScanStatus.FAILED
+            db.commit()
+            sys.exit(1)
+        finally:
+            fetcher.cleanup()
+
+    # Fetch results
+    vulns = db.query(Vulnerability).filter(Vulnerability.scan_id == scan.id).all()
+
+    if vulns:
+        table = Table(title=f"Found {len(vulns)} Vulnerabilities")
+        table.add_column("Severity", style="bold")
+        table.add_column("File", style="cyan")
+        table.add_column("Line", style="yellow")
+        table.add_column("Title", style="white")
+
+        for v in vulns:
+            sev_style = {"critical": "red", "high": "orange1", "medium": "yellow", "low": "white"}
+            table.add_row(
+                f"[{sev_style.get(v.severity, 'white')}]{v.severity.upper()}[/]",
+                v.file_path,
+                str(v.line_start or ""),
+                v.title or "",
+            )
+        console.print(table)
+
+    # Output
+    content, media_type = format_report(scan, vulns, output_format)
+    if output:
+        Path(output).write_text(content)
+        click.echo(f"Report saved to: {output}")
+    else:
+        if output_format == "markdown":
+            console.print(Markdown(content))
+        else:
+            click.echo(content)
+
+    db.close()
+
+
+# ── Config Command ─────────────────────────────────────────────────────
+
+@cli.group()
+def config():
+    """Manage VulnScout configuration."""
+    pass
+
+
+@config.command("init")
+def config_init():
+    """Create default configuration file."""
+    from shutil import copyfile
+
+    env_example = Path(__file__).parent.parent / ".env.example"
+    env_path = Path(".env")
+
+    if env_path.exists():
+        click.echo(".env already exists.")
+        return
+
+    if env_example.exists():
+        copyfile(str(env_example), str(env_path))
+        click.echo("Created .env with default configuration.")
+    else:
+        click.echo("Example config not found.", err=True)
+        sys.exit(1)
+
+
+@config.command("set")
+@click.argument("key")
+@click.argument("value")
+def config_set(key, value):
+    """Set a configuration value."""
+    env_path = Path(".env")
+    if not env_path.exists():
+        click.echo("No .env file found. Run `vulnscout config init` first.", err=True)
+        sys.exit(1)
+
+    content = env_path.read_text()
+    lines = content.split("\n")
+    found = False
+    for i, line in enumerate(lines):
+        if line.startswith(f"{key}="):
+            lines[i] = f"{key}={value}"
+            found = True
+            break
+    if not found:
+        lines.append(f"{key}={value}")
+        click.echo(f"Added new config key: {key}")
+
+    env_path.write_text("\n".join(lines))
+    click.echo(f"Set {key}={value}")
+
+
+# ── Patch Commands ─────────────────────────────────────────────────────
+
+@cli.group()
+def patch():
+    """Manage fix patches."""
+    pass
+
+
+@patch.command("apply")
+@click.argument("vuln_id")
+def patch_apply(vuln_id):
+    """Apply a fix patch for a vulnerability."""
+    from vulnscout.models.db import init_db, SessionLocal
+    from vulnscout.models.schemas import Patch, PatchStatus
+
+    init_db()
+    db = SessionLocal()
+
+    patch = db.query(Patch).filter(Patch.vuln_id == vuln_id).first()
+    if not patch:
+        click.echo(f"No patch found for vulnerability: {vuln_id}.", err=True)
+        sys.exit(1)
+
+    patch.status = PatchStatus.APPLIED
+    db.commit()
+    click.echo(f"Patch applied.")
+    click.echo(f"\nDiff:\n{patch.diff_content}")
+
+    db.close()
+
+
+@patch.command("apply-all")
+@click.argument("scan_id")
+def patch_apply_all(scan_id):
+    """Apply all patches for a scan."""
+    from vulnscout.models.db import init_db, SessionLocal
+    from vulnscout.models.schemas import Patch, PatchStatus, Vulnerability
+
+    init_db()
+    db = SessionLocal()
+
+    patches = (
+        db.query(Patch)
+        .join(Vulnerability)
+        .filter(Vulnerability.scan_id == scan_id)
+        .all()
+    )
+
+    if not patches:
+        click.echo("No patches found.")
+        return
+
+    count = 0
+    for p in patches:
+        p.status = PatchStatus.APPLIED
+        count += 1
+
+    db.commit()
+    click.echo(f"Applied {count} patches.")
+    db.close()
+
+
+# ── Doctor Command ─────────────────────────────────────────────────────
+
+@cli.command()
+def doctor():
+    """Diagnose the environment."""
+    click.echo(f"VulnScout v{__version__}")
+    click.echo("")
+
+    hw = detect_hardware()
+    click.echo("Hardware:")
+    click.echo(f"  GPU: {hw.gpu_name if hw.has_gpu else 'Not detected (CPU mode)'}")
+    click.echo(f"  VRAM: {hw.total_vram_mb}MB ({hw.gpu_count} GPU(s))")
+    click.echo(f"  Recommended model: {hw.recommended_model}")
+    click.echo(f"  Recommended backend: {hw.recommended_backend}")
+
+    if hw.warnings:
+        click.echo("")
+        click.echo("Warnings:")
+        for w in hw.warnings:
+            click.echo(f"  [!] {w}")
+
+    click.echo("")
+    mm = ModelManager()
+    downloaded = mm.list_downloaded_models()
+    if downloaded:
+        click.echo("Downloaded models:")
+        for m in downloaded:
+            click.echo(f"  [x] {m}")
+    else:
+        click.echo("No models downloaded. Run `vulnscout model download`.")
+
+    click.echo("")
+    deps = [
+        ("fastapi", "fastapi"),
+        ("sqlalchemy", "sqlalchemy"),
+        ("click", "click"),
+        ("gitpython", "git"),
+        ("openai", "openai"),
+    ]
+    click.echo("Dependencies:")
+    for name, mod in deps:
+        try:
+            __import__(mod)
+            click.echo(f"  [x] {name}")
+        except ImportError:
+            click.echo(f"  [ ] {name} (missing)")
+
+
+# ── Model Commands ─────────────────────────────────────────────────────
+
+@cli.group()
+def model():
+    """Manage AI models."""
+    pass
+
+
+@model.command("list")
+def model_list():
+    """List available and downloaded models."""
+    mm = ModelManager()
+
+    click.echo("Available models:")
+    for m in mm.list_available_models():
+        status = "x" if mm.is_downloaded(m["name"]) else " "
+        click.echo(f"  [{status}] {m['name']} ({m['size_gb']}GB)")
+
+    click.echo("")
+    click.echo("Download a model: vulnscout model download <model-name>")
+
+
+@model.command("download")
+@click.argument("model_name", required=False)
+@click.option("--mirror", is_flag=True, help="Use ModelScope mirror (China).")
+def model_download(model_name, mirror):
+    """Download an AI model."""
+    mm = ModelManager()
+    model_name = mm.resolve_model(model_name)
+
+    if mm.is_downloaded(model_name):
+        click.echo(f"Model already downloaded: {model_name}")
+        return
+
+    click.echo(f"Downloading {model_name}...")
+    try:
+        path = mm.download_model(model_name, use_mirror=mirror)
+        click.echo(f"Downloaded to: {path}")
+    except Exception as e:
+        click.echo(f"Download failed: {e}", err=True)
+        sys.exit(1)
+
+
+@model.command("status")
+def model_status():
+    """Show current model status."""
+    click.echo(f"Current model: {settings.model_name}")
+    click.echo(f"Backend: {settings.model_backend}")
+
+    mm = ModelManager()
+    hw = detect_hardware()
+    click.echo(f"Recommended: {hw.recommended_model} ({hw.recommended_backend})")
+
+
+if __name__ == "__main__":
+    cli()
