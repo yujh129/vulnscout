@@ -1,0 +1,57 @@
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[project]
+name = "vulnscout"
+version = "0.1.0"
+description = "AI Vulnerability Code Audit Assistant powered by DeepSeek-Coder"
+requires-python = ">=3.11"
+authors = [
+    {name = "VulnScout Team", email = "team@vulnscout.dev"},
+]
+license = {text = "MIT"}
+readme = "README.md"
+
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.27.0",
+    "sqlalchemy>=2.0.0",
+    "alembic>=1.13.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "click>=8.1.0",
+    "celery>=5.3.0",
+    "redis>=5.0.0",
+    "py-tree-sitter>=0.23.0",
+    "gitpython>=3.1.0",
+    "httpx>=0.26.0",
+    "aiofiles>=23.0.0",
+    "python-multipart>=0.0.9",
+    "websockets>=12.0",
+    "rich>=13.0.0",
+    "openai>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.3.0",
+    "mypy>=1.8.0",
+]
+
+[project.scripts]
+vulnscout = "vulnscout.cli:cli"
+
+[tool.pdm]
+distribution = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
