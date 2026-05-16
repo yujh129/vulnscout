@@ -1,0 +1,60 @@
+{
+  "app": {
+    "title": "VulnScout",
+    "subtitle": "AI-Powered Code Vulnerability Scanner",
+    "language": "Language"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "newScan": "New Scan",
+    "docs": "Documentation"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "recentScans": "Recent Scans",
+    "totalScans": "Total Scans",
+    "totalVulnerabilities": "Total Vulnerabilities",
+    "noScans": "No scans yet. Start by creating a new scan."
+  },
+  "scan": {
+    "new": "New Scan",
+    "localPath": "Local Directory Path",
+    "githubUrl": "GitHub Repository URL",
+    "uploadZip": "Upload ZIP File",
+    "start": "Start Scan",
+    "running": "Scanning...",
+    "done": "Scan Complete",
+    "failed": "Scan Failed",
+    "progress": "Scanning {{file}} ({{percent}}%)",
+    "finding": "Found vulnerabilities in {{file}}",
+    "results": "Scan Results"
+  },
+  "vuln": {
+    "severity": "Severity",
+    "file": "File",
+    "line": "Line",
+    "cwe": "CWE ID",
+    "title": "Title",
+    "description": "Description",
+    "fix": "Fix",
+    "apply": "Apply Fix",
+    "reject": "Reject"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "empty": "No data",
+    "close": "Close",
+    "back": "Back",
+    "export": "Export Report",
+    "json": "JSON",
+    "sarif": "SARIF",
+    "markdown": "Markdown"
+  },
+  "severity": {
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  }
+}
