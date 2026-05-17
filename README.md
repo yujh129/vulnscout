@@ -26,10 +26,9 @@ with automatic GPU adaptation.
 | Platform | CLI | Web UI | Docker |
 |----------|:---:|:------:|:------:|
 | Linux | ✅ | ✅ | ✅ |
-| Windows | ✅ | ❌ | ⚠️ (WSL2) |
+| Windows | ✅ | ✅ | ⚠️ (WSL2) |
 
-> Windows users: CLI is fully supported. Web UI is not available on Windows.
-> Use WSL2 for the full experience including Web UI and Docker.
+> Windows: CLI and Web UI are fully supported. For Docker, use WSL2 backend.
 
 ## Quick Start
 

@@ -24,10 +24,9 @@ VulnScout 利用本地部署的 DeepSeek-Coder AI 模型，通过 [Ollama](https
 | 平台 | CLI | Web UI | Docker |
 |----------|:---:|:------:|:------:|
 | Linux | ✅ | ✅ | ✅ |
-| Windows | ✅ | ❌ | ⚠️（需 WSL2） |
+| Windows | ✅ | ✅ | ⚠️（需 WSL2） |
 
-> Windows 用户：CLI 完全可用，Web UI 暂不支持。
-> 建议使用 WSL2 以获得完整体验（包括 Web UI 和 Docker）。
+> Windows：CLI 和 Web UI 均可正常使用。Docker 需使用 WSL2 后端。
 
 ## 快速开始
 
