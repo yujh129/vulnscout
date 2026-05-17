@@ -27,7 +27,8 @@ DeepSeek-Coder AI models. Supports Web UI and CLI, with automatic GPU adaptation
 ### Install from source
 
 ```bash
-git clone https://github.com/vulnscout/vulnscout
+# Clone the repository
+git clone <your-repo-url>
 cd vulnscout
 pip install .
 ```
