@@ -66,6 +66,9 @@ vulnscout scan ./my-project
 # 扫描 GitHub 仓库
 vulnscout scan https://github.com/user/repo
 
+# 试试扫描这个示例项目
+vulnscout scan https://github.com/yujh129/AI-Desktop-Pet
+
 # 导出 SARIF 格式（兼容 GitHub CodeQL）
 vulnscout scan ./my-project --format sarif --output report.sarif
 ```

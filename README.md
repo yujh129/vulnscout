@@ -68,6 +68,9 @@ vulnscout scan ./my-project
 # Scan a GitHub repository
 vulnscout scan https://github.com/user/repo
 
+# Try scanning this sample project
+vulnscout scan https://github.com/yujh129/AI-Desktop-Pet
+
 # Export to SARIF (compatible with GitHub CodeQL)
 vulnscout scan ./my-project --format sarif --output report.sarif
 ```
