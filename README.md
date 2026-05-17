@@ -44,7 +44,7 @@ with automatic GPU adaptation.
 curl -fsSL https://ollama.com/install.sh | sh
 ```
 
-### 2. Install VulnScout & build frontend
+### 2. Install VulnScout
 
 ```bash
 # Clone the repository
@@ -53,9 +53,6 @@ cd vulnscout
 
 # Install Python backend
 pip install -e ".[dev]"
-
-# Build frontend (one-time)
-cd frontend && npm install && npm run build && cd ..
 ```
 
 ### 3. Pull the AI model
@@ -89,15 +86,24 @@ vulnscout scan ./my-project --format markdown --output report.md
 
 ### Optional: Start the Web UI
 
-```bash
-# Start API server (serves both API and frontend on one port)
-uvicorn vulnscout.main:app --host 0.0.0.0 --port 8000
+**Option A — One port (recommended):** Build frontend once, then API + UI on :8000
 
-# Open http://localhost:8000 in your browser
+```bash
+cd frontend && npm install && npm run build && cd ..
+uvicorn vulnscout.main:app --host 0.0.0.0 --port 8000
+# Open http://localhost:8000
 ```
 
-> The built frontend (`frontend/dist/`) is served automatically by FastAPI.
-> No separate frontend dev server needed for production use.
+**Option B — Two ports (dev mode):** No build needed, UI auto-reloads on changes
+
+```bash
+# Terminal 1: API server
+uvicorn vulnscout.main:app --host 0.0.0.0 --port 8000
+
+# Terminal 2: Frontend dev server
+cd frontend && npm install && npm run dev
+# Open http://localhost:3000
+```
 
 ### Docker（备用方案）
 
