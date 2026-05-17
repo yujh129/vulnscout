@@ -33,13 +33,18 @@ VulnScout 利用本地部署的 DeepSeek-Coder AI 模型，通过 [Ollama](https
 curl -fsSL https://ollama.com/install.sh | sh
 ```
 
-### 2. 安装 VulnScout
+### 2. 安装 VulnScout 并编译前端
 
 ```bash
 # 克隆仓库
 git clone <your-repo-url>
 cd vulnscout
+
+# 安装 Python 后端
 pip install -e ".[dev]"
+
+# 编译前端（仅首次）
+cd frontend && npm install && npm run build && cd ..
 ```
 
 ### 3. 拉取 AI 模型
@@ -68,12 +73,13 @@ vulnscout scan ./my-project --format sarif --output report.sarif
 ### （可选）启动 Web UI
 
 ```bash
-# 启动 API 服务（需先启动 Ollama）
+# 启动 API 服务（同一个端口提供 API + 前端页面）
 uvicorn vulnscout.main:app --host 0.0.0.0 --port 8000
 
-# 启动前端（另一个终端）
-cd frontend && npm install && npm run dev
+# 浏览器打开 http://localhost:8000
 ```
+
+> 编译好的前端（`frontend/dist/`）由 FastAPI 自动托管，无需额外启动前端服务。
 
 或使用 Docker Compose 一键启动：
 

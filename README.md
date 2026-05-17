@@ -35,13 +35,18 @@ with automatic GPU adaptation.
 curl -fsSL https://ollama.com/install.sh | sh
 ```
 
-### 2. Install VulnScout
+### 2. Install VulnScout & build frontend
 
 ```bash
 # Clone the repository
 git clone <your-repo-url>
 cd vulnscout
+
+# Install Python backend
 pip install -e ".[dev]"
+
+# Build frontend (one-time)
+cd frontend && npm install && npm run build && cd ..
 ```
 
 ### 3. Pull the AI model
@@ -70,12 +75,14 @@ vulnscout scan ./my-project --format sarif --output report.sarif
 ### Optional: Start the Web UI
 
 ```bash
-# Start the API server (Ollama must be running)
+# Start API server (serves both API and frontend on one port)
 uvicorn vulnscout.main:app --host 0.0.0.0 --port 8000
 
-# Start frontend (separate terminal)
-cd frontend && npm install && npm run dev
+# Open http://localhost:8000 in your browser
 ```
+
+> The built frontend (`frontend/dist/`) is served automatically by FastAPI.
+> No separate frontend dev server needed for production use.
 
 Or with Docker Compose:
 
