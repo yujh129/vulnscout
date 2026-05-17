@@ -24,10 +24,19 @@ DeepSeek-Coder AI models. Supports Web UI and CLI, with automatic GPU adaptation
 - (Optional) NVIDIA GPU with 8GB+ VRAM for GPU mode
 - (Optional) llama.cpp for CPU mode
 
-### Install
+### Install from source
 
 ```bash
-pip install vulnscout
+git clone https://github.com/vulnscout/vulnscout
+cd vulnscout
+pip install .
+```
+
+### Install for development
+
+```bash
+pip install -e ".[dev]"
+pytest
 ```
 
 ### Run a Scan
@@ -81,13 +90,14 @@ vulnscout patch apply-all <scan>   Apply all patches for a scan
 
 See [docs/architecture.md](docs/architecture.md) for detailed architecture documentation.
 
-## Development
+## Publishing to PyPI (Future)
+
+Once the project is mature, publish with:
 
 ```bash
-git clone https://github.com/vulnscout/vulnscout
-cd vulnscout
-pip install -e ".[dev]"
-pytest
+pip install build
+python -m build
+twine upload dist/*
 ```
 
 ## License

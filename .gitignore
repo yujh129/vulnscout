@@ -8,3 +8,5 @@ build/
 .env
 *.db
 vulnscout_models/
+*.sh
+frontend/node_modules/

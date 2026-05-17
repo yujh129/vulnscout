@@ -69,11 +69,11 @@
 ## 快速使用
 
 ```bash
-# 安装依赖
+# 安装依赖（开发模式）
 pip install -e ".[dev]"
 
 # 诊断环境
-python -m vulnscout.cli doctor
+vulnscout doctor
 
 # 启动 API 服务
 uvicorn vulnscout.main:app --host 0.0.0.0 --port 8000
