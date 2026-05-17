@@ -87,7 +87,10 @@ vulnscout scan ./my-project --format markdown --output report.md
 **方式 A — 单端口（推荐）：** 编译一次前端，API + UI 都在 :8000
 
 ```bash
-cd frontend && npm install && npm run build && cd ..
+cd frontend
+npm install
+npm run build
+cd ..
 uvicorn vulnscout.main:app --host 0.0.0.0 --port 8000
 # 打开 http://localhost:8000
 ```
@@ -99,7 +102,9 @@ uvicorn vulnscout.main:app --host 0.0.0.0 --port 8000
 uvicorn vulnscout.main:app --host 0.0.0.0 --port 8000
 
 # 终端 2：前端开发服务
-cd frontend && npm install && npm run dev
+cd frontend
+npm install
+npm run dev
 # 打开 http://localhost:3000
 ```
 

@@ -89,7 +89,10 @@ vulnscout scan ./my-project --format markdown --output report.md
 **Option A — One port (recommended):** Build frontend once, then API + UI on :8000
 
 ```bash
-cd frontend && npm install && npm run build && cd ..
+cd frontend
+npm install
+npm run build
+cd ..
 uvicorn vulnscout.main:app --host 0.0.0.0 --port 8000
 # Open http://localhost:8000
 ```
@@ -101,7 +104,9 @@ uvicorn vulnscout.main:app --host 0.0.0.0 --port 8000
 uvicorn vulnscout.main:app --host 0.0.0.0 --port 8000
 
 # Terminal 2: Frontend dev server
-cd frontend && npm install && npm run dev
+cd frontend
+npm install
+npm run dev
 # Open http://localhost:3000
 ```
 
