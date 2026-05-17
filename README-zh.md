@@ -81,6 +81,9 @@ vulnscout scan https://github.com/yujh129/AI-Desktop-Pet
 
 # 导出 SARIF 格式（兼容 GitHub CodeQL）
 vulnscout scan ./my-project --format sarif --output report.sarif
+
+# 导出 Markdown 报告
+vulnscout scan ./my-project --format markdown --output report.md
 ```
 
 ### （可选）启动 Web UI
@@ -125,6 +128,7 @@ vulnscout patch apply <vuln-id>    应用修复补丁
 vulnscout patch apply-all <scan>   应用某次扫描的所有补丁
 vulnscout github issue <scan-id>    创建 GitHub Issue 报告漏洞
 vulnscout github pr <scan-id>       创建包含自动修复的 PR
+vulnscout uninstall               彻底卸载 VulnScout（包 + 数据 + 模型）
 ```
 
 ## 工作原理

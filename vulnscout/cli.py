@@ -36,8 +36,10 @@ def cli():
 
 @cli.command()
 @click.argument("path", required=True)
-@click.option("--format", "-f", "output_format", type=click.Choice(["json", "sarif", "markdown"]), default="json", help="Report output format. (default: json)")
-@click.option("--output", "-o", type=click.Path(), help="Write report to file instead of stdout.")
+@click.option("--format", "-f", "output_format", type=click.Choice(["json", "sarif", "markdown"]), default="json",
+              help="Report format (default: json). Choices: json (machine), sarif (CodeQL), markdown (human).")
+@click.option("--output", "-o", type=click.Path(),
+              help="Save report to file (e.g. --format sarif --output results.sarif).")
 @click.option("--auto-fix", is_flag=True, help="Automatically generate fix patches for all vulnerabilities.")
 @click.option("--lang", multiple=True, type=click.Choice(["python", "javascript", "typescript", "java", "c", "cpp"]), help="Target languages to scan. Default: all supported.")
 @click.option("--severity", type=click.Choice(["critical", "high", "medium", "low"]), help="Minimum severity to report.")
@@ -497,6 +499,65 @@ def github_pr(scan_id, repo, branch, base):
         click.echo(f"  Failed: {e}", err=True)
 
     db.close()
+
+
+# ── Uninstall Command ──────────────────────────────────────────────────
+
+@cli.command()
+def uninstall():
+    """Completely remove VulnScout (package + config + models + database)."""
+    import shutil
+    from pathlib import Path
+
+    click.confirm("This will delete ALL VulnScout data:\n"
+                  "  - Python package\n"
+                  "  - Database file\n"
+                  "  - Config file (.env)\n"
+                  "  - Downloaded AI models\n"
+                  "  - Scan cache\n"
+                  "Continue?", abort=True)
+
+    removed = []
+
+    # 1. Uninstall Python package
+    try:
+        import subprocess
+        subprocess.run(["pip", "uninstall", "vulnscout", "-y"],
+                       capture_output=True)
+        removed.append("Python package")
+    except Exception:
+        pass
+
+    # 2. Remove database
+    db_path = Path.cwd() / "vulnscout.db"
+    if db_path.exists():
+        db_path.unlink()
+        removed.append("Database (vulnscout.db)")
+
+    # 3. Remove .env
+    env_path = Path.cwd() / ".env"
+    if env_path.exists():
+        env_path.unlink()
+        removed.append("Config file (.env)")
+
+    # 4. Remove model cache
+    model_dir = Path.home() / ".vulnscout"
+    if model_dir.exists():
+        shutil.rmtree(model_dir)
+        removed.append("AI models (~/.vulnscout)")
+
+    # 5. Remove SQLite DB in home
+    home_db = Path.home() / ".vulnscout" / "vulnscout.db"
+    if home_db.exists():
+        home_db.unlink()
+
+    if removed:
+        click.echo("Removed:")
+        for item in removed:
+            click.echo(f"  - {item}")
+        click.echo("VulnScout has been completely uninstalled.")
+    else:
+        click.echo("Nothing to remove. VulnScout is not installed.")
 
 
 if __name__ == "__main__":

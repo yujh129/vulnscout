@@ -83,6 +83,9 @@ vulnscout scan https://github.com/yujh129/AI-Desktop-Pet
 
 # Export to SARIF (compatible with GitHub CodeQL)
 vulnscout scan ./my-project --format sarif --output report.sarif
+
+# Export to Markdown report
+vulnscout scan ./my-project --format markdown --output report.md
 ```
 
 ### Optional: Start the Web UI
@@ -128,6 +131,7 @@ vulnscout patch apply <vuln-id>    Apply a fix patch
 vulnscout patch apply-all <scan>   Apply all patches for a scan
 vulnscout github issue <scan-id>    Create GitHub issues for vulnerabilities
 vulnscout github pr <scan-id>       Create a PR with auto-generated fixes
+vulnscout uninstall                 Completely remove VulnScout (package + data + models)
 ```
 
 ## How It Works
