@@ -10,3 +10,4 @@ build/
 vulnscout_models/
 *.sh
 frontend/node_modules/
+.pi/
