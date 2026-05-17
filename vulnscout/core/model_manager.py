@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 import time
@@ -15,13 +16,14 @@ class ModelError(Exception):
     pass
 
 
-def _ollama_api(path: str, method: str = "GET") -> dict | None:
+def _ollama_api(path: str, method: str = "GET", json_data: dict | None = None, timeout: float = 5.0) -> dict | None:
     """Call Ollama API and return JSON response, or None on failure."""
     try:
         resp = httpx.request(
             method,
             f"{settings.ollama_api_url}{path}",
-            timeout=5.0,
+            json=json_data,
+            timeout=timeout,
         )
         if resp.status_code == 200:
             return resp.json()
@@ -62,31 +64,31 @@ class ModelManager:
             return False
 
     def ensure_ollama(self) -> None:
-        """Ensure Ollama is installed and running. Auto-start if needed."""
-        if not self.is_ollama_installed():
-            raise ModelError(
-                "Ollama is not installed. Install it first:\n"
-                "  curl -fsSL https://ollama.com/install.sh | sh\n"
-                "Then pull a model: ollama pull deepseek-coder:1.3b"
-            )
+        """Ensure Ollama is reachable. Handles both local and remote (Docker) setups."""
+        # If API is already reachable (remote Ollama via env var), we're good
+        if self.is_ollama_running():
+            return
 
-        if not self.is_ollama_running():
-            # Auto-start Ollama in background
+        # If CLI is installed, auto-start it locally
+        if self.is_ollama_installed():
             self._process = subprocess.Popen(
                 ["ollama", "serve"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
             self._ollama_auto_started = True
-            # Wait for it to start
             for _ in range(30):
                 time.sleep(0.5)
                 if self.is_ollama_running():
-                    break
-            else:
-                raise ModelError(
-                    "Ollama server failed to start. Try running 'ollama serve' manually."
-                )
+                    return
+            raise ModelError("Ollama server failed to start. Try running 'ollama serve' manually.")
+
+        # Neither API nor CLI available
+        raise ModelError(
+            "Ollama is not reachable.\n"
+            "  Local: curl -fsSL https://ollama.com/install.sh | sh\n"
+            "  Docker: Ensure the ollama service is running (docker compose up -d ollama)"
+        )
 
     def download_model(
         self,
@@ -94,7 +96,7 @@ class ModelManager:
         use_mirror: bool = False,
         progress_callback=None,
     ) -> str:
-        """Pull an Ollama model.
+        """Pull an Ollama model. Uses CLI if available, otherwise HTTP API.
 
         Returns the model tag (e.g. 'deepseek-coder:1.3b').
         """
@@ -109,20 +111,36 @@ class ModelManager:
         if progress_callback:
             progress_callback(f"Pulling {model_tag} via Ollama...")
 
-        # Run ollama pull (can take a while for first download)
-        try:
-            result = subprocess.run(
-                ["ollama", "pull", model_tag],
-                capture_output=True,
-                text=True,
-                timeout=600,
-            )
-            if result.returncode != 0:
-                raise ModelError(
-                    f"Failed to pull model: {result.stderr.strip()}"
+        # Prefer CLI if available (local install)
+        if self.is_ollama_installed():
+            try:
+                result = subprocess.run(
+                    ["ollama", "pull", model_tag],
+                    capture_output=True,
+                    text=True,
+                    timeout=600,
                 )
-        except subprocess.TimeoutExpired:
-            raise ModelError("Model download timed out. Try 'ollama pull <model>' manually.")
+                if result.returncode != 0:
+                    raise ModelError(f"Failed to pull model: {result.stderr.strip()}")
+            except subprocess.TimeoutExpired:
+                raise ModelError("Model download timed out.")
+        else:
+            # Fallback: use Ollama HTTP API (works with remote Ollama in Docker)
+            try:
+                with httpx.stream(
+                    "POST",
+                    f"{settings.ollama_api_url}/api/pull",
+                    json={"name": model_tag},
+                    timeout=600,
+                ) as resp:
+                    resp.raise_for_status()
+                    for line in resp.iter_lines():
+                        if line:
+                            data = json.loads(line)
+                            if data.get("status") == "success":
+                                break
+            except Exception as e:
+                raise ModelError(f"Failed to pull model via API: {e}")
 
         if progress_callback:
             progress_callback(f"Model ready: {model_tag}")

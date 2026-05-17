@@ -6,27 +6,13 @@ services:
     environment:
       - DATABASE_URL=sqlite:///data/vulnscout.db
       - MODEL_CACHE_DIR=/models
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - OLLAMA_API_URL=http://ollama:11434
+      - OPENAI_BASE_URL=http://ollama:11434/v1
     volumes:
       - ./data:/app/data
       - model_cache:/models
     depends_on:
-      - redis
-
-  worker:
-    build: .
-    command: celery -A vulnscout.worker.celery_app worker --loglevel=info
-    environment:
-      - DATABASE_URL=sqlite:///data/vulnscout.db
-      - MODEL_CACHE_DIR=/models
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-    volumes:
-      - ./data:/app/data
-      - model_cache:/models
-    depends_on:
-      - redis
+      - ollama
 
   frontend:
     image: node:20-alpine
@@ -39,10 +25,13 @@ services:
     depends_on:
       - api
 
-  redis:
-    image: redis:7-alpine
+  ollama:
+    image: ollama/ollama:latest
     ports:
-      - "6379:6379"
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
 
 volumes:
   model_cache:
+  ollama_data:
