@@ -188,3 +188,7 @@ pytest
 ## 开源协议
 
 MIT
+
+---
+
+*本项目通过 [Vibe Coding](https://github.com/yujh129/vulnscout) 方式，使用 [pi](https://github.com/earendil-works/pi-coding-agent) 编码助手构建。*

@@ -191,3 +191,7 @@ pytest
 ## License
 
 MIT
+
+---
+
+*Built with [Vibe Coding](https://github.com/yujh129/vulnscout) using [pi](https://github.com/earendil-works/pi-coding-agent) — an AI-powered coding agent.*
