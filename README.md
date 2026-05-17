@@ -1,5 +1,9 @@
 # VulnScout — AI-Powered Vulnerability Code Audit Assistant
 
+<p align="right">
+  <a href="README-zh.md">简体中文</a>
+</p>
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/)
 
@@ -114,7 +118,7 @@ See [docs/architecture.md](docs/architecture.md) for detailed design documentati
 
 ```bash
 pip install -e ".[dev]"
-pytest          # 44+ tests
+pytest
 ```
 
 ## License
