@@ -21,6 +21,16 @@ with automatic GPU adaptation.
 - **Privacy-first**: All processing runs locally on your machine
 - **Auto hardware detection**: Automatically selects optimal model for your GPU
 
+## Platform Support
+
+| Platform | CLI | Web UI | Docker |
+|----------|:---:|:------:|:------:|
+| Linux | ✅ | ✅ | ✅ |
+| Windows | ✅ | ❌ | ⚠️ (WSL2) |
+
+> Windows users: CLI is fully supported. Web UI is not available on Windows.
+> Use WSL2 for the full experience including Web UI and Docker.
+
 ## Quick Start
 
 ### Prerequisites

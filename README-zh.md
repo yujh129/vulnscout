@@ -19,6 +19,16 @@ VulnScout 利用本地部署的 DeepSeek-Coder AI 模型，通过 [Ollama](https
 - **隐私优先**: 所有计算在本地完成，代码无需上传
 - **自动硬件检测**: 自动检测 GPU 并选择最优模型
 
+## 平台支持
+
+| 平台 | CLI | Web UI | Docker |
+|----------|:---:|:------:|:------:|
+| Linux | ✅ | ✅ | ✅ |
+| Windows | ✅ | ❌ | ⚠️（需 WSL2） |
+
+> Windows 用户：CLI 完全可用，Web UI 暂不支持。
+> 建议使用 WSL2 以获得完整体验（包括 Web UI 和 Docker）。
+
 ## 快速开始
 
 ### 环境要求
