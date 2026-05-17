@@ -32,6 +32,9 @@ class Settings(BaseSettings):
 
     language: str = "en"
 
+    # GitHub integration
+    github_token: str = ""
+
     # model_name is the Ollama tag, e.g. deepseek-coder:1.3b
 
     model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8")

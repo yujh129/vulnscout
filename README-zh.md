@@ -110,6 +110,8 @@ vulnscout model download <name>    通过 Ollama 拉取 AI 模型
 vulnscout config init              创建配置文件
 vulnscout patch apply <vuln-id>    应用修复补丁
 vulnscout patch apply-all <scan>   应用某次扫描的所有补丁
+vulnscout github issue <scan-id>    创建 GitHub Issue 报告漏洞
+vulnscout github pr <scan-id>       创建包含自动修复的 PR
 ```
 
 ## 工作原理
@@ -123,6 +125,54 @@ vulnscout patch apply-all <scan>   应用某次扫描的所有补丁
    - 第三级：Few-shot 示例（SQL 注入、XSS）提升检测精度
 5. **修复生成**: AI 生成 unified diff 格式的修复代码
 6. **报告输出**: JSON、SARIF 2.1.0（兼容 CodeQL）或 Markdown
+
+## GitHub 集成
+
+自动将漏洞提交到 GitHub 仓库。
+
+### 配置
+
+```bash
+# 创建 GitHub Token（Settings → Developer settings → Personal access tokens）
+# 然后配置：
+vulnscout config set GITHUB_TOKEN ghp_xxxxxxxxxxxxxxxxxxxx
+```
+
+或通过环境变量：
+
+```bash
+export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
+```
+
+### CLI
+
+```bash
+# 为扫描结果创建 Issue
+vulnscout github issue <scan-id>
+
+# 创建包含自动修复的 PR
+vulnscout github pr <scan-id>
+
+# 指定仓库（默认使用扫描时填的 URL）
+vulnscout github issue <scan-id> --repo owner/repo
+
+# 仅报告高危及以上漏洞
+vulnscout github issue <scan-id> --severity high
+```
+
+### API
+
+```bash
+# 创建 Issue
+curl -X POST http://localhost:8000/api/v1/scans/<scan-id>/issues \
+  -H "Content-Type: application/json" \
+  -d '{"repo": "owner/repo", "severity": "high"}'
+
+# 创建 PR
+curl -X POST http://localhost:8000/api/v1/scans/<scan-id>/pr \
+  -H "Content-Type: application/json" \
+  -d '{"repo": "owner/repo", "branch": "vulnscout-fix", "base": "main"}'
+```
 
 ## 架构说明
 

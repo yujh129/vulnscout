@@ -8,6 +8,7 @@ services:
       - MODEL_CACHE_DIR=/models
       - OLLAMA_API_URL=http://ollama:11434
       - OPENAI_BASE_URL=http://ollama:11434/v1
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
     volumes:
       - ./data:/app/data
       - model_cache:/models

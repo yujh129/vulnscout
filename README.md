@@ -113,6 +113,8 @@ vulnscout model download <name>    Pull an AI model via Ollama
 vulnscout config init              Create configuration file
 vulnscout patch apply <vuln-id>    Apply a fix patch
 vulnscout patch apply-all <scan>   Apply all patches for a scan
+vulnscout github issue <scan-id>    Create GitHub issues for vulnerabilities
+vulnscout github pr <scan-id>       Create a PR with auto-generated fixes
 ```
 
 ## How It Works
@@ -126,6 +128,54 @@ vulnscout patch apply-all <scan>   Apply all patches for a scan
    - Tier 3: Few-shot examples (SQLi, XSS) for precise detection
 5. **Fix generation**: AI generates unified diff patches
 6. **Reporting**: JSON, SARIF 2.1.0 (CodeQL compatible), or Markdown
+
+## GitHub Integration
+
+Auto-submit vulnerabilities to GitHub repositories.
+
+### Setup
+
+```bash
+# Create a GitHub token (Settings → Developer settings → Personal access tokens)
+# Then configure it:
+vulnscout config set GITHUB_TOKEN ghp_xxxxxxxxxxxxxxxxxxxx
+```
+
+Or set via environment variable:
+
+```bash
+export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
+```
+
+### CLI
+
+```bash
+# Create issues for all vulnerabilities in a scan
+vulnscout github issue <scan-id>
+
+# Create a PR with auto-generated fix patches
+vulnscout github pr <scan-id>
+
+# Specify a custom repo (defaults to the scanned repo URL)
+vulnscout github issue <scan-id> --repo owner/repo
+
+# Only report critical/high severity issues
+vulnscout github issue <scan-id> --severity high
+```
+
+### API
+
+```bash
+# Create issues
+curl -X POST http://localhost:8000/api/v1/scans/<scan-id>/issues \
+  -H "Content-Type: application/json" \
+  -d '{"repo": "owner/repo", "severity": "high"}'
+
+# Create PR
+curl -X POST http://localhost:8000/api/v1/scans/<scan-id>/pr \
+  -H "Content-Type: application/json" \
+  -d '{"repo": "owner/repo", "branch": "vulnscout-fix", "base": "main"}'
+```
 
 ## Architecture
 
