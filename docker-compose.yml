@@ -1,0 +1,39 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///data/vulnscout.db
+      - MODEL_CACHE_DIR=/models
+      - MODEL_PROVIDER=${MODEL_PROVIDER:-ollama}
+      - MODEL_NAME=${MODEL_NAME:-deepseek-coder:1.3b}
+      - OLLAMA_API_URL=http://ollama:11434
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-http://ollama:11434/v1}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+    volumes:
+      - ./data:/app/data
+      - model_cache:/models
+    depends_on:
+      - ollama
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run build && npx serve -s dist -l 3000"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - api
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+
+volumes:
+  model_cache:
+  ollama_data:
