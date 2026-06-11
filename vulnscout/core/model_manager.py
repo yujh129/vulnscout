@@ -143,14 +143,11 @@ class ModelManager:
         if progress_callback:
             progress_callback(f"Pulling {model_tag} via Ollama...")
         if self.is_ollama_installed():
-            try:
-                result = subprocess.run(
-                    ["ollama", "pull", model_tag], capture_output=True, text=True, timeout=600
-                )
-                if result.returncode != 0:
-                    raise ModelError(f"Failed to pull model: {result.stderr.strip()}")
-            except subprocess.TimeoutExpired:
-                raise ModelError("Model download timed out.")
+            result = subprocess.run(
+                ["ollama", "pull", model_tag]
+            )
+            if result.returncode != 0:
+                raise ModelError(f"Failed to pull model.")
         else:
             try:
                 with httpx.stream(
