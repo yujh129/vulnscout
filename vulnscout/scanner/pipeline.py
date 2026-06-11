@@ -5,11 +5,10 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from vulnscout.models.schemas import Scan, ScanStatus, Vulnerability, Patch, PatchStatus
-from vulnscout.scanner.analyzer import Analyzer
+from vulnscout.models.schemas import Scan, ScanStatus, Vulnerability
+from vulnscout.scanner.analyzer import Analyzer, _rule_check
 from vulnscout.scanner.chunker import chunk_file
 from vulnscout.scanner.dedup import deduplicate, sort_by_severity
-from vulnscout.scanner.patch_generator import generate_diff
 from vulnscout.scanner.language_detector import collect_target_files, detect_language, detect_project_language
 
 
@@ -51,33 +50,40 @@ class ScanPipeline:
             except Exception:
                 continue
 
+            # Rule-based: check each chunk (fast, no API call)
             chunks = chunk_file(str(full_path), lang)
-            file_vulns = []
+            rule_findings = []
             for chunk in chunks:
-                findings = self.analyzer.analyze(rel_path, chunk.code, lang)
-                file_vulns.extend(findings)
+                rule_findings.extend(_rule_check(rel_path, chunk.code, lang))
 
-            file_vulns = deduplicate(file_vulns)
+            # AI analysis: one API call per file (not per chunk)
+            model_findings = []
+            if self.analyzer._check_model():
+                model_findings = self.analyzer.analyze(rel_path, code, lang)
+                model_findings = [f for f in model_findings if f.get("title")]
+
+            # Merge rule and model findings, dedup
+            seen = {f["title"] for f in rule_findings}
+            merged = list(rule_findings)
+            for mf in model_findings:
+                if mf.get("title") and mf["title"] not in seen:
+                    mf["file_path"] = rel_path
+                    merged.append(mf)
+                    seen.add(mf["title"])
+
+            file_vulns = deduplicate(merged)
             file_vulns = sort_by_severity(file_vulns)
 
             for f in file_vulns:
-                vuln_chunk = None
-                for c in chunks:
-                    if f.get("line_start") and c.line_start and c.line_start <= f["line_start"] <= c.line_end:
-                        vuln_chunk = c
-                        break
-                vuln_code = vuln_chunk.code if vuln_chunk else (chunks[0].code if chunks else "")
                 vuln = Vulnerability(scan_id=scan.id, file_path=rel_path,
                     line_start=f.get("line_start"), line_end=f.get("line_end"),
                     cwe_id=f.get("cwe_id"), severity=f.get("severity", "medium"),
                     title=f.get("title", "Unknown Vulnerability"), description=f.get("description", ""),
-                    vulnerable_code=vuln_code)
+                    vulnerable_code=code)
                 self.db.add(vuln)
                 self.db.flush()
-                fixed_code = self.analyzer.generate_fix(chunk.code, f, lang)
-                if fixed_code:
-                    diff = generate_diff(chunk.code, fixed_code, rel_path)
-                    self.db.add(Patch(vuln_id=vuln.id, diff_content=diff, description=f"Auto-generated fix for {f.get('title', 'vulnerability')}", status=PatchStatus.DRAFT))
+                # Fix patches are generated on-demand via POST /scans/{id}/patches/generate
+                # to keep scans fast.
 
             sev_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
             for f in file_vulns:

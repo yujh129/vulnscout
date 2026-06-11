@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     max_concurrent_chunks: int = 4
     language: str = "en"
     github_token: str = ""
+    # Model inference parameters
+    ai_temperature: float = 0.1
+    ai_max_tokens_analyze: int = 1024
+    ai_max_tokens_fix: int = 4096
 
     model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8")
 

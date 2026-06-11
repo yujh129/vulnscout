@@ -12,7 +12,7 @@ import {
 } from '@mui/icons-material';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { fetchScan, fetchResults, createIssues, createPR } from '../api/scans';
+import { fetchScan, fetchResults, createIssues, createPR, generatePatches } from '../api/scans';
 import SeverityBadge from '../components/SeverityBadge';
 
 const ScanResult: React.FC = () => {
@@ -41,6 +41,10 @@ const ScanResult: React.FC = () => {
   const [prRepo, setPrRepo] = useState('');
   const [prBranch, setPrBranch] = useState('vulnscout-fix');
   const [prBase, setPrBase] = useState('main');
+
+  // Patch generation
+  const [patchLoading, setPatchLoading] = useState(false);
+  const [patchResult, setPatchResult] = useState<{ generated: number; errors: number } | null>(null);
 
   // Loading & results
   const [issueLoading, setIssueLoading] = useState(false);
@@ -75,6 +79,20 @@ const ScanResult: React.FC = () => {
       setError(e?.response?.data?.detail || e?.message || 'Failed to create issues');
     } finally {
       setIssueLoading(false);
+    }
+  };
+
+  const handleGeneratePatches = async () => {
+    setPatchLoading(true);
+    setError(null);
+    setPatchResult(null);
+    try {
+      const res = await generatePatches(scanId!);
+      setPatchResult(res);
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || e?.message || 'Failed to generate patches');
+    } finally {
+      setPatchLoading(false);
     }
   };
 
@@ -188,7 +206,7 @@ const ScanResult: React.FC = () => {
           </Stack>
 
           {hasVulns ? (
-            <Stack direction="row" spacing={2} flexWrap="wrap">
+            <Stack direction="row" spacing={2} flexWrap="wrap" alignItems="center">
               <Button
                 variant="outlined"
                 startIcon={<BugIcon />}
@@ -198,6 +216,13 @@ const ScanResult: React.FC = () => {
                 {t('github.createIssues')}
               </Button>
               <Button
+                variant="outlined"
+                onClick={handleGeneratePatches}
+                disabled={patchLoading}
+              >
+                {patchLoading ? t('github.generatingPatches') : t('github.generatePatches')}
+              </Button>
+              <Button
                 variant="contained"
                 startIcon={<GitHubIcon />}
                 onClick={() => setPrDialogOpen(true)}
@@ -205,6 +230,13 @@ const ScanResult: React.FC = () => {
               >
                 {t('github.createPR')}
               </Button>
+              {patchResult && (
+                <Chip
+                  label={t('github.patchesGenerated', { count: patchResult.generated, errors: patchResult.errors })}
+                  color={patchResult.errors > 0 ? 'warning' : 'success'}
+                  size="small"
+                />
+              )}
             </Stack>
           ) : (
             <Typography variant="body2" color="text.secondary">
@@ -213,7 +245,7 @@ const ScanResult: React.FC = () => {
           )}
 
           {/* ── Results Display ── */}
-          {(issueResults || prResult) && (
+          {(issueResults || prResult || patchResult) && (
             <>
               <Divider sx={{ my: 2 }} />
               <Box

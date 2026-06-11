@@ -56,7 +56,11 @@
     "prSuccess": "Pull request created successfully.",
     "error": "GitHub operation failed: {{msg}}",
     "configRequired": "GitHub Token Required",
-    "configHint": "Set GITHUB_TOKEN in your .env file to enable GitHub integration."
+    "configHint": "Set GITHUB_TOKEN in your .env file to enable GitHub integration.",
+    "generatePatches": "Generate Fix Patches",
+    "generatingPatches": "Generating...",
+    "patchesGenerated": "Generated {{count}} patches ({{errors}} failed)",
+    "patchesRequired": "Patches are required before creating a PR. Click 'Generate Fix Patches' first."
   },
   "common": {
     "loading": "Loading...",

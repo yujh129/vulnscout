@@ -56,7 +56,11 @@
     "prSuccess": "Pull Request 创建成功。",
     "error": "GitHub 操作失败：{{msg}}",
     "configRequired": "需要 GitHub Token",
-    "configHint": "在 .env 文件中设置 GITHUB_TOKEN 以启用 GitHub 集成功能。"
+    "configHint": "在 .env 文件中设置 GITHUB_TOKEN 以启用 GitHub 集成功能。",
+    "generatePatches": "生成修复补丁",
+    "generatingPatches": "生成中...",
+    "patchesGenerated": "生成了 {{count}} 个补丁（{{errors}} 个失败）",
+    "patchesRequired": "创建 PR 前需要先生成补丁。请先点击「生成修复补丁」。"
   },
   "common": {
     "loading": "加载中...",

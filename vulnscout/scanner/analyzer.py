@@ -92,12 +92,27 @@ class Analyzer:
         self._model_available: bool | None = None
         self.client: OpenAI | None = None
 
+    @staticmethod
+    def _get_api_config() -> tuple[str, str]:
+        """Return (base_url, api_key) appropriate for the current provider."""
+        if settings.is_ollama:
+            # Ollama provides an OpenAI-compatible endpoint at {ollama_api_url}/v1
+            # OpenAI client requires a non-empty api_key, use a placeholder
+            return f"{settings.ollama_api_url.rstrip('/')}/v1", "sk-ollama-local"
+        else:
+            return settings.openai_base_url, settings.openai_api_key
+
+    def _ensure_client(self):
+        if self.client is None:
+            base_url, api_key = self._get_api_config()
+            self.client = OpenAI(base_url=base_url, api_key=api_key, timeout=10.0, max_retries=0)
+
     def _check_model(self) -> bool:
         if self._model_available is not None:
             return self._model_available
         if settings.is_ollama:
             try:
-                r = httpx.get(f"{settings.ollama_api_url}/api/tags", timeout=2.0)
+                r = httpx.get(f"{settings.ollama_api_url}/api/tags", timeout=0.5)
                 self._model_available = r.status_code == 200
             except Exception:
                 self._model_available = False
@@ -106,7 +121,8 @@ class Analyzer:
                 self._model_available = False
             else:
                 try:
-                    c = OpenAI(base_url=settings.openai_base_url, api_key=settings.openai_api_key, timeout=5.0, max_retries=0)
+                    base_url, api_key = self._get_api_config()
+                    c = OpenAI(base_url=base_url, api_key=api_key, timeout=5.0, max_retries=0)
                     c.models.list()
                     self._model_available = True
                 except Exception:
@@ -118,8 +134,7 @@ class Analyzer:
         rule_findings = _rule_check(file_path, code, language)
         model_findings = []
         if self._check_model():
-            if not hasattr(self, 'client'):
-                self.client = OpenAI(base_url=settings.openai_base_url, api_key=settings.openai_api_key, timeout=10.0, max_retries=0)
+            self._ensure_client()
             model_findings = self._model_analyze(code, language, model)
         seen_titles = {f["title"] for f in rule_findings}
         merged = list(rule_findings)
@@ -142,7 +157,11 @@ class Analyzer:
         messages = list(_FEW_SHOT_EXAMPLES.get(language, []))
         messages.append({"role": "user", "content": _build_zero_shot_prompt(code, language)})
         try:
-            response = self.client.chat.completions.create(model=model, messages=messages, temperature=0.1, max_tokens=2048)
+            response = self.client.chat.completions.create(
+                model=model, messages=messages,
+                temperature=settings.ai_temperature,
+                max_tokens=settings.ai_max_tokens_analyze,
+            )
             content = response.choices[0].message.content
             if not content:
                 return []
@@ -240,10 +259,14 @@ class Analyzer:
         if not self._check_model():
             return None
         model = model or settings.model_name
-        if not hasattr(self, 'client'):
-            self.client = OpenAI(base_url=settings.openai_base_url, api_key=settings.openai_api_key, timeout=10.0, max_retries=0)
+        self._ensure_client()
         try:
-            response = self.client.chat.completions.create(model=model, messages=[{"role": "user", "content": _build_fix_prompt(code, vulnerability, language)}], temperature=0.1, max_tokens=4096)
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": _build_fix_prompt(code, vulnerability, language)}],
+                temperature=settings.ai_temperature,
+                max_tokens=settings.ai_max_tokens_fix,
+            )
             content = response.choices[0].message.content
             match = re.search(r"```(?:\w+)?\n(.*?)\n```", content, re.DOTALL)
             return match.group(1) if match else content

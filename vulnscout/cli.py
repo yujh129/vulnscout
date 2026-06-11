@@ -490,7 +490,7 @@ def uninstall():
         found.append("Python package") if r.returncode == 0 else None
     except Exception:
         pass
-    config_locations = [Path.cwd(), Path.home(), Path.home() / "Projects"]
+    config_locations = [Path.cwd(), Path.home()]
     dotenv_paths = list(dict.fromkeys(p / ".env" for p in config_locations if (p / ".env").exists()))
     db_paths = list(dict.fromkeys(p / "vulnscout.db" for p in config_locations if (p / "vulnscout.db").exists()))
     model_dir = Path.home() / ".vulnscout"

@@ -13,6 +13,11 @@ export const fetchPatches = async (scanId: string, vulnId: string): Promise<Patc
 export const createScan = async (sourceType: string, sourcePath: string): Promise<Scan> => { const { data } = await api.post('/scans', null, { params: { source_type: sourceType, source_path: sourcePath } }); return data; };
 export const createScanFromZip = async (file: File): Promise<Scan> => { const fd = new FormData(); fd.append('file', file); const { data } = await api.post('/scans?source_type=local', fd); return data; };
 
+export const generatePatches = async (scanId: string): Promise<{ generated: number; errors: number }> => {
+  const { data } = await api.post(`/scans/${scanId}/patches/generate`);
+  return data;
+};
+
 // ── GitHub Integration ──
 
 interface GitHubIssueResult {

@@ -18,12 +18,16 @@ class HardwareInfo:
 
     @property
     def recommended_model(self) -> str:
+        from vulnscout.core.model_manager import KNOWN_OLLAMA_MODELS
         if not self.has_gpu:
-            return "deepseek-coder:1.3b"
+            return KNOWN_OLLAMA_MODELS[0]["name"] if KNOWN_OLLAMA_MODELS else "deepseek-coder:1.3b"
         vram = self.total_vram_mb
-        if vram >= 24000:
-            return "deepseek-coder:6.7b"
-        return "deepseek-coder:1.3b"
+        # Pick the largest model that fits in VRAM (rough: model needs ~4x its size in VRAM)
+        best = KNOWN_OLLAMA_MODELS[0]
+        for m in KNOWN_OLLAMA_MODELS:
+            if m["size_gb"] > 0 and m["size_gb"] * 4 * 1024 <= vram:
+                best = m
+        return best["name"]
 
     @property
     def recommended_backend(self) -> str:

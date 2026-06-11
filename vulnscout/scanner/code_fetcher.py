@@ -22,8 +22,8 @@ class CodeFetcher:
             raise CodeFetchError(f"Path is not a directory: {path}")
         return src
 
-    def fetch_zip(self, zip_data: bytes) -> Path:
-        dest = self.work_dir / "source"
+    def fetch_zip(self, zip_data: bytes, extract_dir: str = "source") -> Path:
+        dest = self.work_dir / extract_dir
         dest.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(io.BytesIO(zip_data)) as zf:
             zf.extractall(dest)

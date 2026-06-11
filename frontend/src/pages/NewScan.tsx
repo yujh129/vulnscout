@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Typography, Card, CardContent, TextField, Button, Tabs, Tab, Divider } from '@mui/material';
+import { Box, Typography, Card, CardContent, TextField, Button, Tabs, Tab, Divider, Alert, Snackbar } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { createScan, createScanFromZip } from '../api/scans';
@@ -11,16 +11,21 @@ const NewScan: React.FC = () => {
   const [localPath, setLocalPath] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleStartScan = async () => {
     setLoading(true);
+    setError(null);
     try {
       let scan;
       if (tab === 0) scan = await createScan('local', localPath);
       else if (tab === 1) scan = await createScan('url', githubUrl);
       else { const inp = document.getElementById('zip-file-input') as HTMLInputElement; if (inp?.files?.[0]) scan = await createScanFromZip(inp.files[0]); else return; }
       navigate(`/scans/${scan.id}`);
-    } catch { alert('Failed to start scan.'); } finally { setLoading(false); }
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail || e?.message || 'Failed to start scan.';
+      setError(msg);
+    } finally { setLoading(false); }
   };
 
   return (
@@ -35,6 +40,11 @@ const NewScan: React.FC = () => {
           {tab === 0 && <TextField fullWidth label={t('scan.localPath')} placeholder="/home/user/projects/my-app" value={localPath} onChange={e => setLocalPath(e.target.value)} />}
           {tab === 1 && <TextField fullWidth label={t('scan.githubUrl')} placeholder="https://github.com/username/repository" value={githubUrl} onChange={e => setGithubUrl(e.target.value)} />}
           {tab === 2 && <Button variant="outlined" component="label" fullWidth sx={{ py: 4, borderStyle: 'dashed' }}>{t('scan.uploadZip')}<input id="zip-file-input" type="file" accept=".zip" hidden /></Button>}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2, fontSize: 13 }} onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
           <Box sx={{ mt: 3, textAlign: 'right' }}>
             <Button variant="contained" size="large" onClick={handleStartScan} disabled={loading || (tab === 0 ? !localPath : tab === 1 ? !githubUrl : false)}>
               {loading ? t('scan.running') : t('scan.start')}
